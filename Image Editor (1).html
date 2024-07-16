@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Editor</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+    @import url(https://fonts.googleapis.com/css?family=Indie+Flower);
+   
+    body{
+        background-color:#ddb892;
+    }
+
+    .myheader{
+        background-color: #b08968;
+    }
+
+    h1{
+        font-family: 'Indie Flower', cursive;
+        color:#7f5539;
+    }
+
+    .mycontainer{
+        display: grid;
+        grid-template-columns: 70% 30%;
+        padding: 20px;
+        padding-left: 40px;
+    }
+    #canvasContainer {
+        width: 700px; 
+        height: 500px; 
+        border-style: inset;
+        overflow: hidden; 
+    }
+    canvas {
+        float:left;
+        display: block;
+        width: 100%; 
+        height: 100%; 
+        background-color: #f6f7f7;
+    }
+   
+    ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 10px;
+        }
+    li{
+        padding: 6px; 
+    }
+    
+    button {
+        background-color:#7f5539;
+        width: 140px;
+        height: 40px;
+        border: none;
+        color: white;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 8px;
+    }
+</style>
+</head>
+<body >
+    <div class="myheader">
+        <center>
+            <h1><i class="fa fa-camera-retro" style="font-size:36px;"></i> Photo Editor</h1>
+        </center>   
+    </div>
+    <div class="mycontainer">
+        <div id="canvasContainer">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div>
+        <ul>
+            <li><input type="file" id="uploadInput" accept="image/*"></li>
+            <li><button id="grayscaleButton">Grayscale</button></li>
+            <li><button id="blackWhiteButton">Black & White</button></li>
+            <li><button id="vintageButton">Vintage</button></li>
+            <li><button id="contrastButton">Contrast</button></li>
+            <li><button id="resetButton">Reset</button></li>
+            <li><button id="saveButton">Save</button></li>
+        </ul>
+        </div>
+    </div> 
+
+<script>
+window.onload = function() {
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    var uploadInput = document.getElementById('uploadInput');
+    var saveButton = document.getElementById('saveButton');
+    var grayscaleButton = document.getElementById('grayscaleButton');
+    var blackWhiteButton = document.getElementById('blackWhiteButton');
+    var vintageButton = document.getElementById('vintageButton');
+    var contrastButton = document.getElementById('contrastButton');
+    var resetButton = document.getElementById('resetButton');
+    var img = new Image();
+    var originalImage = null;
+
+    // Function to handle image upload
+    uploadInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        var reader = new FileReader();
+        
+        reader.onload = function(event) {
+            img.onload = function() {
+                originalImage = new Image();
+                originalImage.src = img.src;
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+            }
+            img.src = event.target.result;
+        }
+        
+        reader.readAsDataURL(file);
+    });
+
+    // Function to handle saving the edited image
+    saveButton.addEventListener('click', function() {
+        var dataURL = canvas.toDataURL(); // Get the data URL of the canvas
+        var a = document.createElement('a');
+        a.href = dataURL;
+        a.download = 'edited_image.png'; // Set the filename
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+
+    resetButton.addEventListener('click', function() {
+        if (originalImage) {
+            canvas.width = originalImage.width;
+            canvas.height = originalImage.height;
+            ctx.drawImage(originalImage, 0, 0);
+        }
+    });
+
+    grayscaleButton.addEventListener('click', function() {
+        applyFilter('grayscale');
+    });
+
+    blackWhiteButton.addEventListener('click', function() {
+        applyFilter('blackWhite');
+    });
+
+    vintageButton.addEventListener('click', function() {
+        applyFilter('vintage');
+    });
+
+    contrastButton.addEventListener('click', function() {
+        applyFilter('contrast');
+    });
+
+    function applyFilter(filterType) {
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imageData.data;
+
+        for (var i = 0; i < data.length; i += 4) {
+            var r = data[i];
+            var g = data[i + 1];
+            var b = data[i + 2];
+
+            if (filterType === 'grayscale') {
+                var avg = (r + g + b) / 3;
+                data[i] = avg;
+                data[i + 1] = avg;
+                data[i + 2] = avg;
+            } else if (filterType === 'blackWhite') {
+                var avg = (r + g + b) / 3;
+                var threshold = 128;
+                var value = avg < threshold ? 0 : 255;
+                data[i] = value;
+                data[i + 1] = value;
+                data[i + 2] = value;
+            } else if (filterType === 'vintage') {
+                var tr = 0.5 * r + 0.5 * g + 0.5 * b;
+                var tg = 0.4 * r + 0.6 * g + 0.2 * b;
+                var tb = 0.6 * r + 0.3 * g + 0.1 * b;
+                data[i] = tr < 255 ? tr : 255;
+                data[i + 1] = tg < 255 ? tg : 255;
+                data[i + 2] = tb < 255 ? tb : 255;
+            } else if (filterType === 'contrast') {
+                var factor = (259 * (128 + 255)) / (255 * (259 - 128));
+                data[i] = factor * (data[i] - 128) + 128;
+                data[i + 1] = factor * (data[i + 1] - 128) + 128;
+                data[i + 2] = factor * (data[i + 2] - 128) + 128;
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+    }
+};
+</script>
+</body>
+</html>
